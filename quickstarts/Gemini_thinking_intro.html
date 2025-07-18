@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gemini系列模型思考过程解释</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .ppt-slide {
+            width: 1200px;
+            height: 800px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 24px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+            padding: 60px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .ppt-slide::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 6px;
+            background: linear-gradient(90deg, #4f46e5, #7c3aed, #ec4899);
+        }
+
+        .card-title {
+            font-size: 24px;
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .icon {
+            width: 30px;
+            height: 30px;
+            background: linear-gradient(135deg, #4f46e5, #7c3aed);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .icon::after {
+            content: '🧠';
+            font-size: 16px;
+        }
+
+        .content-container {
+            display: flex;
+            flex-direction: column;
+            gap: 40px;
+            height: calc(100% - 100px);
+        }
+
+        .info-card {
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 16px;
+            padding: 30px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .info-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+        }
+
+        .card-content {
+            font-size: 16px;
+            line-height: 1.7;
+            color: #4b5563;
+        }
+
+        .tech-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .tech-tag {
+            background: linear-gradient(135deg, #f3f4f6, #e5e7eb);
+            color: #374151;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 500;
+            border: 1px solid rgba(79, 70, 229, 0.2);
+        }
+
+        /* 最新模型系列样式 */
+        .models-container {
+            margin-top: 20px;
+        }
+
+        .models-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 25px;
+        }
+
+        .model-card {
+            background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+            border-radius: 12px;
+            padding: 22px;
+            border: 2px solid #e2e8f0;
+            transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .model-card:hover {
+            border-color: #4f46e5;
+            background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
+        }
+
+        .model-name {
+            font-weight: 600;
+            color: #1e293b;
+            font-size: 18px;
+            margin-bottom: 10px;
+        }
+
+        .model-desc {
+            font-size: 14px;
+            color: #64748b;
+            line-height: 1.5;
+            margin-bottom: 15px;
+            flex: 1;
+        }
+
+        /* Thinking Budget 子框样式 */
+        .budget-subbox {
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 8px;
+            padding: 15px;
+            border: 1px solid #e2e8f0;
+            font-size: 13px;
+        }
+
+        .budget-subbox p {
+            margin-bottom: 6px;
+            line-height: 1.5;
+        }
+
+        .budget-subbox p:last-child {
+            margin-bottom: 0;
+        }
+
+        .budget-subbox strong {
+            color: #1e293b;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .info-card {
+            animation: fadeInUp 0.6s ease forwards;
+        }
+
+        .info-card:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+    </style>
+</head>
+<body>
+<div class="ppt-slide">
+    <div class="content-container">
+        <div class="info-card">
+            <h3 class="card-title">
+                <div class="icon"></div>
+                核心思考机制
+            </h3>
+            <div class="card-content">
+                <p>Gemini的thinking功能是指其能够在回答前进行推理，以提升性能和准确性。模型将复杂问题分解为连续思维步骤，经多次尝试和学习来优化推理策略。这种机制使模型能够处理更复杂的任务并提供更准确的结果。</p>
+                <div class="tech-list">
+                    <span class="tech-tag">强化学习</span>
+                    <span class="tech-tag">链式思维提示</span>
+                    <span class="tech-tag">推理优化</span>
+                    <span class="tech-tag">步骤分解</span>
+                    <span class="tech-tag">自我验证</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="info-card">
+            <h3 class="card-title">
+                <div class="icon" style="background: linear-gradient(135deg, #dc2626, #ef4444);"></div>
+                Gemini 2.5系列模型
+            </h3>
+            <div class="card-content">
+                <p>Gemini 2.5系列模型在思考能力上进行了显著提升，不同型号针对不同应用场景进行了优化，满足从快速响应到深度推理的各种需求。</p>
+
+                <div class="models-container">
+                    <div class="models-grid">
+                        <div class="model-card">
+                            <div class="model-name">Gemini 2.5 Flash</div>
+                            <div class="model-desc">高效快速模型，支持thinking budget参数控制，平衡速度与推理质量，适合实时应用场景。</div>
+                            <div class="budget-subbox">
+                                <p><strong>默认设置：</strong>动态思考（模型自主决定）</p>
+                                <p><strong>范围：</strong>0-24576</p>
+                                <p><strong>停用思考：</strong>thinkingBudget = 0</p>
+                                <p><strong>动态思维：</strong>thinkingBudget = -1</p>
+                            </div>
+                        </div>
+
+                        <div class="model-card">
+                            <div class="model-name">Gemini 2.5 Pro</div>
+                            <div class="model-desc">专业级模型，默认启用动态思考功能，提供最先进的推理能力，适合复杂任务处理。</div>
+                            <div class="budget-subbox">
+                                <p><strong>默认设置：</strong>动态思考（模型自主决定）</p>
+                                <p><strong>范围：</strong>128-32768</p>
+                                <p><strong>停用思考：</strong>不适用（无法停用）</p>
+                                <p><strong>动态思维：</strong>thinkingBudget = -1</p>
+                            </div>
+                        </div>
+
+                        <div class="model-card">
+                            <div class="model-name">Gemini 2.5 Flash Lite</div>
+                            <div class="model-desc">轻量级高效模型，优化资源占用，基本思考功能支持，适合资源受限环境。</div>
+                            <div class="budget-subbox">
+                                <p><strong>默认设置：</strong>模型不思考</p>
+                                <p><strong>范围：</strong>512-24576</p>
+                                <p><strong>停用思考：</strong>thinkingBudget = 0</p>
+                                <p><strong>动态思维：</strong>thinkingBudget = -1</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>
